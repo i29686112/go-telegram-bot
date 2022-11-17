@@ -1,0 +1,78 @@
+# docker-compose.yml
+version: '3'
+
+networks:
+  server:
+  data:
+
+services:
+  postgresql:
+    restart: always
+    container_name: docker_env_postgresql
+    ports:
+      - "5432:5432"
+    image: postgres:15.1
+    volumes:
+      - /var/lib/postgres
+    networks:
+      - data
+    environment:
+      POSTGRES_USER: ian
+      POSTGRES_PASSWORD: secret
+
+#  nginx:
+#    container_name: docker_env_nginx
+#    image: nginx:1.18 # stable version
+#    networks:
+#      - server
+#    ports:
+#      - "80:80"
+#      - "443:443"
+#    volumes:
+#      - ./nginx/conf.d/:/etc/nginx/conf.d/
+#      - ./nginx/ssl/:/ssl/
+#      - /Applications/MAMP/htdocs:/var/www/html
+#    restart: always
+#
+#  php:
+#    container_name: docker_env_php
+#    build: ./php/
+#    environment:
+#      PHP_IDE_CONFIG: "serverName=motom-web-dev"
+#    expose:
+#      - 9000
+#      - 9001
+#    networks:
+#      - server
+#      - data
+#    volumes:
+#      - /Applications/MAMP/htdocs:/var/www/html
+#      - /Applications/MAMP/htdocs/motom/docker_env/php/conf.d/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+#      - /Applications/MAMP/htdocs/motom/docker_env/php/conf.d/error_reporting.ini:/usr/local/etc/php/conf.d/error_reporting.ini
+#    restart: always
+#
+#  redis:
+#    container_name: docker_env_redis
+#    image: redis:6.0 # stable version
+#    ports:
+#      - "6379:6379"
+#    networks:
+#      - data
+#    restart: always
+#
+#  sphinx:
+#    image: macbre/sphinxsearch:3.4.1
+#    container_name: docker_env_sphinx
+#    environment:
+#      - SPHINX_CONFIG_FILE=/opt/sphinx/conf/sphinx.conf
+#    ports:
+#      - "9312:9312" # bind to local8 interface only!
+#    volumes:
+#      - ./sphinx/data:/opt/sphinx/index  # directory where sphinx will store index data
+#      - ./sphinx/conf.d/sphinx.conf:/opt/sphinx/conf/sphinx.conf  # SphinxSE configuration file
+#    links:
+#      - mysql
+#    networks:
+#      - data
+    #command: tail -F anything
+    # enable the command part, the sphinx not set ( need to set with command `/opt/sphinx/sphinx-3.4.1/bin/indexer --all --config /opt/sphinx/conf/sphinx.conf`)

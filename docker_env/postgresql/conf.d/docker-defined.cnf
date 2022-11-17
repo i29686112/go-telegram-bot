@@ -1,0 +1,5 @@
+[mysqld]
+general_log_file        = /tmp/mysql-query.log
+general_log             = 1
+log_output              = 'file'
+sql-mode                = 'STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION'
