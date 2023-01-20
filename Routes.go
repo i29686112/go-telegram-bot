@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -58,7 +60,7 @@ func botMainHandler(c *gin.Context) {
 	//	//Handle Error
 	//}
 
-	var rawJsonString string = ""
+	var rawJsonString = ""
 
 	var telegramRequestBody TelegramRequestBody
 
@@ -68,11 +70,10 @@ func botMainHandler(c *gin.Context) {
 	}
 
 	// insert log
-	saveTelegramLog(telegramRequestBody, rawJsonString, db)
+	telegramWebhookHistory := saveTelegramLog(telegramRequestBody, rawJsonString, db)
 
-	// todo, reply user
-
-	fmt.Println(telegramRequestBody.Message.Text)
+	// reply user
+	replyUser(telegramWebhookHistory)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "You input is " + telegramRequestBody.Message.Text,
@@ -80,9 +81,31 @@ func botMainHandler(c *gin.Context) {
 
 }
 
-func saveTelegramLog(telegramRequestBody TelegramRequestBody, rawJsonString string, db *gorm.DB) {
+func replyUser(telegramWebhookHistory TelegramWebhookHistory) {
+
+	chatIdString := strconv.Itoa(telegramWebhookHistory.ChatId)
+	replyStr := "You input string is `" + telegramWebhookHistory.MessageText + "`"
+	webhookStr := "bot" + telegramBotToken
+
+	webhookUrl := fmt.Sprintf("https://api.telegram.org/%s/sendMessage?chat_id=%s&text=%s", webhookStr, chatIdString, replyStr)
+
+	res, err := http.Get(webhookUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer res.Body.Close()
+	telegramSendMessageResponse, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("%s", telegramSendMessageResponse)
+}
+
+func saveTelegramLog(telegramRequestBody TelegramRequestBody, rawJsonString string, db *gorm.DB) TelegramWebhookHistory {
 
 	telegramWebhookHistory := TelegramWebhookHistory{
+		ChatId:      telegramRequestBody.Message.Chat.Id,
 		UserId:      telegramRequestBody.Message.From.Id,
 		FirstName:   telegramRequestBody.Message.From.FirstName,
 		LastName:    telegramRequestBody.Message.From.LastName,
@@ -94,6 +117,8 @@ func saveTelegramLog(telegramRequestBody TelegramRequestBody, rawJsonString stri
 
 	db.Create(&telegramWebhookHistory) // pass pointer of data to Create
 
+	return telegramWebhookHistory
+
 }
 
 type MessageBody struct {
@@ -101,6 +126,7 @@ type MessageBody struct {
 	MessageId int      `json:"message_id"`
 	Date      int      `json:"date"`
 	From      FromBody `json:"from"`
+	Chat      FromBody `json:"chat"`
 }
 
 type FromBody struct {

@@ -16,6 +16,7 @@ type User struct {
 type TelegramWebhookHistory struct {
 	// force makes the ID as the first column.
 	ID          uint `gorm:"primarykey"`
+	ChatId      int  `gorm:"index:idx_telegram_chat_id"`
 	UserId      int  `gorm:"index:idx_telegram_user_id"`
 	FirstName   string
 	LastName    string
