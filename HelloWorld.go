@@ -9,7 +9,7 @@ func getTempString() (string, int) {
 	return "hello world yo", 1
 }
 
-func main() {
+func main1() {
 	var str string
 
 	str, num := getTempString()
