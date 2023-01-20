@@ -13,6 +13,20 @@ type User struct {
 	NewFieldTest string
 }
 
+type TelegramWebhookHistory struct {
+	// force makes the ID as the first column.
+	ID          uint `gorm:"primarykey"`
+	UserId      int  `gorm:"index:idx_telegram_user_id"`
+	FirstName   string
+	LastName    string
+	Username    string
+	MessageDate int
+	MessageText string
+	RawRequest  string
+
+	gorm.Model
+}
+
 func getDb() *gorm.DB {
 	dsn := "host=localhost user=ian password=secret dbname=bot port=5432 sslmode=disable TimeZone=Asia/Taipei"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -25,8 +39,8 @@ func getDb() *gorm.DB {
 func checkMigration() {
 
 	db := getDb()
-	err := db.AutoMigrate(&User{})
-	err = db.Migrator().DropIndex(&User{}, "idx_name")
+	err := db.AutoMigrate(&User{}, &TelegramWebhookHistory{})
+	//err = db.Migrator().DropIndex(&User{}, "idx_name")
 	if err != nil {
 		log.Fatalln("migration with error:" + err.Error())
 	}
