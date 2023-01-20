@@ -40,22 +40,17 @@ func main() {
 
 	r.POST("/", func(c *gin.Context) {
 
-		var jsonDecodeMap map[string]interface{}
+		var messageBody MessageBody
 
-		err := c.Bind(&jsonDecodeMap)
+		err := c.Bind(&messageBody)
 		if err != nil {
 			return
 		}
-		//= jsonDecodeMap["message"]["text"]
-		var updateId float64 = jsonDecodeMap["update_id"].(float64)
-		var messageBody map[string]interface{} = jsonDecodeMap["message"].(map[string]interface{})
-		var messageText string = messageBody["text"].(string)
-		//var text string = jsonDecodeMap["message"]["text"].(string)
 
-		fmt.Println(messageText)
+		fmt.Println(messageBody.Message.Text)
 
 		c.JSON(http.StatusOK, gin.H{
-			"message": fmt.Sprintf("%.0f", updateId) + ", text=" + messageText,
+			"message": "You input is " + messageBody.Message.Text,
 		})
 
 	})
@@ -67,10 +62,10 @@ func main() {
 }
 
 type TextBody struct {
-	text string
+	Text string `json:"text"`
 }
 
 type MessageBody struct {
-	message  TextBody
-	updateId int16
+	Message  TextBody `json:"message"`
+	UpdateId int      `json:"update_id"`
 }
