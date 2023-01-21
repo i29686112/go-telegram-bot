@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"
@@ -29,7 +30,8 @@ type TelegramWebhookHistory struct {
 }
 
 func getDb() *gorm.DB {
-	dsn := "host=localhost user=ian password=secret dbname=bot port=5432 sslmode=disable TimeZone=Asia/Taipei"
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=5432 sslmode=disable TimeZone=Asia/Taipei", dbHost, dbUser, dbPassword, dbName)
+
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalln(err)
