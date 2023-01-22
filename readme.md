@@ -11,4 +11,4 @@ Tried of developing PHP program, trying to learn something new...
 
 
 ### Demo
-[Telegram Bot](t.me/GoTelegramProdBot)
+[Telegram Bot](https://t.me/GoTelegramProdBot)
