@@ -10,7 +10,9 @@ import (
 	"main/structs"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 )
 
 func main() {
@@ -91,13 +93,30 @@ func replyUser(telegramWebhookHistory TelegramWebhookHistory) {
 	switch telegramWebhookHistory.MessageText {
 	case "/searchnews":
 		//
-		searchResult, err := searchFromBingNewsSearch("dog")
+		searchResult, err := searchFromBingNewsSearch("parrot")
 
 		if err != nil {
 			return
 		}
 
-		fmt.Print(searchResult)
+		if len(searchResult.Value) == 0 {
+			sendPlainTextToUser(webhookStr, chatIdString, "No news had been found with the keyword")
+		} else {
+
+			sendPlainTextToUser(webhookStr, chatIdString, "Here is top 3 news")
+
+			for index, row := range searchResult.Value {
+
+				if index >= 3 {
+					// we only need return first 3 to user.
+					break
+				}
+				rankText := fmt.Sprintf("======Top %d news====", index+1)
+				recommendText := fmt.Sprintf("%s:\n title:%s\n link:%s", rankText, row.Name, row.Url)
+				sendPlainTextToUser(webhookStr, chatIdString, recommendText)
+			}
+
+		}
 
 	default:
 		// reply user with what they said.
@@ -156,7 +175,7 @@ func searchFromBingNewsSearch(searchText string) (structs.BingNewsReachResult, e
 }
 
 func bodyParseToBingNewsReachResult(res *http.Response) (structs.BingNewsReachResult, error) {
-
+	// parse response to struct directly
 	defaultBingNewsReachResult := structs.BingNewsReachResult{}
 	jsonDecodeError2 := json.NewDecoder(res.Body).Decode(&defaultBingNewsReachResult)
 	if jsonDecodeError2 != nil {
@@ -176,11 +195,26 @@ func stringParseToBingSearchResult(bodyToString string) (structs.BingNewsReachRe
 }
 
 func sendPlainTextToUser(webhookStr string, chatIdString string, replyStr string) {
-	webhookUrl := fmt.Sprintf("https://api.telegram.org/%s/sendMessage?chat_id=%s&text=%s", webhookStr, chatIdString, replyStr)
+	webhookUrl := fmt.Sprintf("https://api.telegram.org/%s/sendMessage", webhookStr)
 
-	res, err := http.Get(webhookUrl)
-	if err != nil {
-		log.Fatal(err)
+	formData := url.Values{
+		"chat_id": {chatIdString},
+		"text":    {replyStr},
+	}
+
+	client := &http.Client{}
+	req, createHttpClientErr := http.NewRequest("POST", webhookUrl, strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	if createHttpClientErr != nil {
+		fmt.Println(createHttpClientErr)
+		return
+	}
+
+	res, requestError := client.Do(req)
+	if requestError != nil {
+		fmt.Println(requestError)
+		return
 	}
 	defer res.Body.Close()
 	telegramSendMessageResponse, err := ioutil.ReadAll(res.Body)
