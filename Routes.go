@@ -93,7 +93,7 @@ func replyUser(telegramWebhookHistory TelegramWebhookHistory) {
 	switch telegramWebhookHistory.MessageText {
 	case "/searchnews":
 		//
-		searchResult, err := searchFromBingNewsSearch("parrot")
+		searchResult, err := searchFromBingNewsSearch("taiwan")
 
 		if err != nil {
 			return
