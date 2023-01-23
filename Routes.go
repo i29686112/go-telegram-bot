@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"io/ioutil"
+	"io"
 	"log"
+	"main/repositories"
 	"main/structs"
 	"math/rand"
 	"net/http"
@@ -58,26 +59,39 @@ func botMainHandler(client *gin.Context) {
 
 	db := getDb()
 
-	//it seems we can't bind after getRawData, it will cause Bind get EOF error.
-	//rawData, err := client.GetRawData()
-	//if err != nil {
-	//	//Handle Error
-	//}
-	//fmt.Println(rawData)
-
-	var rawJsonString = ""
-
 	var telegramRequestBody structs.TelegramRequestBody
 
-	err2 := client.Bind(&telegramRequestBody)
-	if err2 != nil {
+	// get user input
+	body, getRawDataErr := client.GetRawData()
+	if getRawDataErr != nil {
+		log.Fatal(getRawDataErr)
+		return
+	}
+	rawJsonString := string(body)
+
+	telegramRequestBody, parseTelegramRequestBodyErr := stringParseToTelegramWebhook(rawJsonString)
+
+	if parseTelegramRequestBodyErr != nil {
+		log.Fatal(parseTelegramRequestBodyErr)
 		return
 	}
 
 	// insert log
 	telegramWebhookHistory := saveTelegramLog(telegramRequestBody, rawJsonString, db)
 
-	replyUser(telegramWebhookHistory)
+	lastUserInputCommand := repositories.GetLastUserInputCommand(telegramWebhookHistory.ChatId, db)
+
+	if telegramWebhookHistory.MessageText == "/searchnews" {
+		repositories.SaveLastTelegramCommand(telegramRequestBody, db)
+	}
+
+	// main handle function
+	replyUser(telegramWebhookHistory, lastUserInputCommand)
+
+	if lastUserInputCommand.ChatId > 0 {
+		// delete last command
+		repositories.DeleteLastTelegramCommand(telegramWebhookHistory.ChatId, db)
+	}
 
 	client.JSON(http.StatusOK, gin.H{
 		"message": "You input is " + telegramRequestBody.Message.Text,
@@ -85,43 +99,54 @@ func botMainHandler(client *gin.Context) {
 
 }
 
-func replyUser(telegramWebhookHistory TelegramWebhookHistory) {
+func replyUser(telegramWebhookHistory TelegramWebhookHistory, lastUserInputCommand repositories.TelegramLastCommand) {
 
 	chatIdString := strconv.Itoa(telegramWebhookHistory.ChatId)
 	webhookStr := "bot" + telegramBotToken
 
 	switch telegramWebhookHistory.MessageText {
 	case "/searchnews":
-		//
-		searchResult, err := searchFromBingNewsSearch("taiwan")
+		sendPlainTextToUser(webhookStr, chatIdString, "Give me a news search keyword")
+	default:
+		// get last command
+		if lastUserInputCommand.ID > 0 {
 
-		if err != nil {
-			return
-		}
+			//
+			searchResult, err := searchFromBingNewsSearch(telegramWebhookHistory.MessageText)
 
-		if len(searchResult.Value) == 0 {
-			sendPlainTextToUser(webhookStr, chatIdString, "No news had been found with the keyword")
-		} else {
-
-			sendPlainTextToUser(webhookStr, chatIdString, "Here is top 3 news")
-
-			for index, row := range searchResult.Value {
-
-				if index >= 3 {
-					// we only need return first 3 to user.
-					break
-				}
-				rankText := fmt.Sprintf("======Top %d news====", index+1)
-				recommendText := fmt.Sprintf("%s:\n title:%s\n link:%s", rankText, row.Name, row.Url)
-				sendPlainTextToUser(webhookStr, chatIdString, recommendText)
+			if err != nil {
+				return
 			}
 
-		}
+			replyText := fmt.Sprintf("No news had been found with the keyword `%s`", telegramWebhookHistory.MessageText)
 
-	default:
-		// reply user with what they said.
-		replyStr := "You input string is `" + telegramWebhookHistory.MessageText + "`"
-		sendPlainTextToUser(webhookStr, chatIdString, replyStr)
+			if len(searchResult.Value) == 0 {
+
+				sendPlainTextToUser(webhookStr, chatIdString, replyText)
+
+			} else {
+				replyText = fmt.Sprintf("Here are top 3 news with the keyword `%s`", telegramWebhookHistory.MessageText)
+
+				sendPlainTextToUser(webhookStr, chatIdString, replyText)
+
+				for index, row := range searchResult.Value {
+
+					if index >= 3 {
+						// we only need return first 3 to user.
+						break
+					}
+					rankText := fmt.Sprintf("======Top %d news====", index+1)
+					recommendText := fmt.Sprintf("%s:\n title:%s\n link:%s", rankText, row.Name, row.Url)
+					sendPlainTextToUser(webhookStr, chatIdString, recommendText)
+				}
+
+			}
+
+		} else {
+			// reply user with what they said.
+			replyStr := "You input string is `" + telegramWebhookHistory.MessageText + "`"
+			sendPlainTextToUser(webhookStr, chatIdString, replyStr)
+		}
 
 	}
 
@@ -153,7 +178,7 @@ func searchFromBingNewsSearch(searchText string) (structs.BingNewsReachResult, e
 	defer res.Body.Close()
 
 	// parse method 1
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println(err)
 		return defaultBingNewsReachResult, nil
@@ -183,6 +208,15 @@ func bodyParseToBingNewsReachResult(res *http.Response) (structs.BingNewsReachRe
 	}
 	return defaultBingNewsReachResult, nil
 
+}
+
+func stringParseToTelegramWebhook(bodyToString string) (structs.TelegramRequestBody, error) {
+	telegramRequestBody := structs.TelegramRequestBody{}
+	err := json.Unmarshal([]byte(bodyToString), &telegramRequestBody)
+	if err != nil {
+		return telegramRequestBody, err
+	}
+	return telegramRequestBody, nil
 }
 
 func stringParseToBingSearchResult(bodyToString string) (structs.BingNewsReachResult, error) {
@@ -217,7 +251,7 @@ func sendPlainTextToUser(webhookStr string, chatIdString string, replyStr string
 		return
 	}
 	defer res.Body.Close()
-	telegramSendMessageResponse, err := ioutil.ReadAll(res.Body)
+	telegramSendMessageResponse, err := io.ReadAll(res.Body)
 	if err != nil {
 		log.Fatal(err)
 	}

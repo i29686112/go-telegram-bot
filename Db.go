@@ -5,6 +5,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"
+	"main/repositories"
 )
 
 type User struct {
@@ -42,7 +43,7 @@ func getDb() *gorm.DB {
 func checkMigration() {
 
 	db := getDb()
-	err := db.AutoMigrate(&User{}, &TelegramWebhookHistory{})
+	err := db.AutoMigrate(&User{}, &TelegramWebhookHistory{}, &repositories.TelegramLastCommand{})
 	//err = db.Migrator().DropIndex(&User{}, "idx_name")
 	if err != nil {
 		log.Fatalln("migration with error:" + err.Error())
