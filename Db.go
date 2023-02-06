@@ -26,6 +26,8 @@ type TelegramWebhookHistory struct {
 	MessageDate int
 	MessageText string
 	RawRequest  string
+	Latitude    string `gorm:"size:20"`
+	Longitude   string `gorm:"size:20"`
 
 	gorm.Model
 }

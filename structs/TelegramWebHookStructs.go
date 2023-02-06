@@ -1,11 +1,17 @@
 package structs
 
 type MessageBody struct {
-	Text      string   `json:"text"`
-	MessageId int      `json:"message_id"`
-	Date      int      `json:"date"`
-	From      FromBody `json:"from"`
-	Chat      FromBody `json:"chat"`
+	Text      string       `json:"text"`
+	MessageId int          `json:"message_id"`
+	Date      int          `json:"date"`
+	From      FromBody     `json:"from"`
+	Chat      FromBody     `json:"chat"`
+	Location  LocationBody `json:"location"`
+}
+
+type LocationBody struct {
+	Latitude  string `json:"latitude"`
+	Longitude string `json:"longitude"`
 }
 
 type FromBody struct {

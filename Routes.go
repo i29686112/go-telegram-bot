@@ -270,6 +270,8 @@ func saveTelegramLog(telegramRequestBody structs.TelegramRequestBody, rawJsonStr
 		MessageDate: telegramRequestBody.Message.Date,
 		MessageText: telegramRequestBody.Message.Text,
 		RawRequest:  rawJsonString,
+		Latitude:    telegramRequestBody.Message.Location.Latitude,
+		Longitude:   telegramRequestBody.Message.Location.Longitude,
 	}
 
 	db.Create(&telegramWebhookHistory) // pass pointer of data to Create
